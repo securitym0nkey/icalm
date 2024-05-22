@@ -85,7 +85,7 @@ func (dt *DualLookupTable) AddNetwork(network net.IPNet, s string) {
 	if network.IP.To4() != nil {
 		dt.v4.AddNetwork(network, s)
 	} else {
-		dt.v4.AddNetwork(network, s)
+		dt.v6.AddNetwork(network, s)
 	}
 }
 

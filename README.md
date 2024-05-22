@@ -15,6 +15,8 @@ Annotations can be loaded from a cvs file. Such cvs file has 2 columns: *NETWORK
 192.0.2.0/24,(TEST-NET-1)
 198.51.100.0/24,(TEST-NET-2)
 203.0.113.0/24,(TEST-NET-3)
+2001:DB8::0/32,v6 Example
+ff00::/8,v6 Multicast
 ```
 
 Lookups can be done via the line-protocol or http
