@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var version string = "v0.0.0-dev"
+
 func stress(network string, addr string, stop int) (time.Duration, int, int) {
 	
 	conn, err := net.Dial(network, addr)
@@ -56,6 +58,7 @@ func stress(network string, addr string, stop int) (time.Duration, int, int) {
 func main() {
 	var pFlag = flag.Int("p", runtime.NumCPU()/2, "Count of parallel worker routines to send queries")
 	var cFlag = flag.Int("c", 100000, "Amount of quries to do with each worker routine")
+	var versionFlag = flag.Bool("version", false, "Prints version and exists")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [flags] [PROTO]:[ADDR]\n\nFlags:\n", os.Args[0])
@@ -63,6 +66,11 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
 
 	if flag.NArg() != 1 {
 		flag.Usage()

@@ -12,14 +12,36 @@ import (
 	"syscall"
 )
 
+var version string = "v0.0.0-dev"
+
+
 func main() {
-	fmt.Println("IP: CIDR annotation lookup microservice")
+
 	var httplistenFlag = flag.String("http-listen", "", "Address on which the server will listen for http requests. Example: 127.0.0.1:8226")
 	var linelistenFlag = flag.String("line-listen", "", "Address on which the server will listen for line-protocol requests. Example: 127.0.0.1:4226")
 	var lineunixFlag = flag.String("line-unix", "", "Path of a unix-socket on which icalm provides a line-protocol lookup service. Example: /var/run/icalm/sock")
 	var cidrfileFlag = flag.String("networks", "./networks.csv", "Path to the file containing the CIDR to annotation mapping.")
+	var versionFlag = flag.Bool("version", false, "Prints version and exists")
 
 	flag.Parse()
+
+	flag.Usage = func(){
+		fmt.Fprintf(os.Stderr, "Usage: %v [flags]\n\nFlags:\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
+	if *versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
+
+	fmt.Printf("IP: CIDR annotation lookup microservice [%v]\n", version)
+
+	if *httplistenFlag == "" && *linelistenFlag == "" && *lineunixFlag == "" {
+		fmt.Fprintln(os.Stderr,"Useless. Need to serve on at least one method. Specify -http-listen, -line-listen or -line-unix")
+		flag.Usage()
+		os.Exit(1)
+	}
 
 	toclose := make([]io.Closer, 0)
 
@@ -49,12 +71,6 @@ func main() {
 		}
 		log.Printf("Serving lineproto @ %v \n", lineunixserver.Addr())
 		toclose = append(toclose, lineunixserver)
-	}
-
-	if len(toclose) == 0 {
-		fmt.Println("Useless. Need to serve on at least one method. Specify -http-listen, -line-listen or -line-unix: ")
-		flag.PrintDefaults()
-		os.Exit(1)
 	}
 
 	sigChan := make(chan os.Signal, 1)
