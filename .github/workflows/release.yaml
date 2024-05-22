@@ -21,4 +21,5 @@ jobs:
         multi_binaries: true
         project_path: "./cmd/..."
         goversion: "go.mod"
-        extra_files: LICENSE README.md 
+        ldflags: -X "main.version=${{ github.ref_name }}"
+        extra_files: LICENSE README.md
