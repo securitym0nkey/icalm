@@ -21,5 +21,7 @@ jobs:
         multi_binaries: true
         project_path: "./cmd/..."
         goversion: "go.mod"
-        ldflags: -X "main.version=${{ github.ref_name }}"
+        build_flags: -tags ${{ github.ref_name }}
         extra_files: LICENSE README.md
+      env:
+        CGO_ENABLED: 0
