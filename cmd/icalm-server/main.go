@@ -16,6 +16,7 @@ var version string = "v0.0.0-dev"
 
 
 func main() {
+	version = config.VersionString()
 
 	var httplistenFlag = flag.String("http-listen", "", "Address on which the server will listen for http requests. Example: 127.0.0.1:8226")
 	var linelistenFlag = flag.String("line-listen", "", "Address on which the server will listen for line-protocol requests. Example: 127.0.0.1:4226")

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/securitym0nkey/icalm/internal/config"
 )
 
 var version string = "v0.0.0-dev"
@@ -56,6 +57,7 @@ func stress(network string, addr string, stop int) (time.Duration, int, int) {
 }
 
 func main() {
+	version = config.VersionString()
 	var pFlag = flag.Int("p", runtime.NumCPU()/2, "Count of parallel worker routines to send queries")
 	var cFlag = flag.Int("c", 100000, "Amount of quries to do with each worker routine")
 	var versionFlag = flag.Bool("version", false, "Prints version and exists")
