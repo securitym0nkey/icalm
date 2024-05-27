@@ -7,6 +7,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  ICALM_VERSION: ${{ github.ref_name }}
 
 jobs:
   build:
@@ -39,6 +40,8 @@ jobs:
         id: container-build
         uses: docker/build-push-action@v5
         with:
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labeles }}
+          build-args: tags=${{ env.ICALM_VERSION }}
