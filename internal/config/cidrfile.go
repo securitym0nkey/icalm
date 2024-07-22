@@ -1,15 +1,15 @@
 package config
 
 import (
-	"bufio"
+	"encoding/csv"
 	"github.com/securitym0nkey/icalm/pkg/iplookup"
+	"io"
 	"log"
 	"net"
 	"os"
-	"strings"
 )
 
-// Loads a comma spearated CIDR file with max 2 cols
+// LoadLookupTableFromFile loads a comma seperated CIDR file with exactly 2 cols
 // 1st col is the Network in CIDR and 2nd col is the map value
 func LoadLookupTableFromFile(path string) (*iplookup.DualLookupTable, error) {
 	f, err := os.Open(path)
@@ -17,21 +17,34 @@ func LoadLookupTableFromFile(path string) (*iplookup.DualLookupTable, error) {
 		return nil, err
 	}
 	table := iplookup.NewDualLookupTable()
-	sn := bufio.NewScanner(f)
-	for sn.Scan() {
-		cidr2data := sn.Text()
-		sp := strings.SplitN(cidr2data, ",", 2)
-		if len(sp) != 2 {
-			log.Printf("Invalid format: %v\n", cidr2data)
-			continue
+
+	r := csv.NewReader(f)
+	r.FieldsPerRecord = 2
+	for {
+		record, err := r.Read()
+
+		// End of file
+		if err == io.EOF {
+			break
 		}
-		_, cidr, err := net.ParseCIDR(sp[0])
+
+		// Something not well formated, skipping
 		if err != nil {
-			log.Printf("invalid network: %v\n", sp[0])
+			log.Printf("Invalid format: %s\n", err.Error())
 			continue
 		}
-		table.AddNetwork(*cidr, sp[1])
+
+		// Parse CIDR
+		_, cidr, err := net.ParseCIDR(record[0])
+		if err != nil {
+			line, _ := r.FieldPos(0)
+			log.Printf("invalid network in line %d: %v\n", line, record[0])
+			continue
+		}
+
+		// all nice, insert
+		table.AddNetwork(*cidr, record[1])
 	}
-	f.Close()
+	_ = f.Close()
 	return table, nil
 }
