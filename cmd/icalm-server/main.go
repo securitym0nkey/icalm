@@ -103,8 +103,17 @@ func main() {
 
 	log.Println("Shutting down")
 
+	//closing all the listening sockets
 	for _, cs := range toclose {
 		cs.Close()
 	}
+
+	log.Println("Waiting for clients to disconnect")
+
+	//wait until all clients have finished their business
+	for _, serv := range servers {
+		serv.Wg.Wait()
+	}
+
 
 }

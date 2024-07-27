@@ -19,6 +19,7 @@ type LineServer struct {
 	clients      map[net.Conn]*LineServerConnection
 	table        iplookup.LookupTable
 	clientsMutex sync.Mutex
+	Wg           sync.WaitGroup
 }
 
 func ServLineProto(c net.Conn, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
@@ -106,6 +107,7 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 	}
 
 	go func(s *LineServer) {
+
 		defer s.Listener.Close()
 		for {
 			conn, err := s.Listener.Accept()
@@ -118,10 +120,11 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 				update_chan: make(chan *iplookup.LookupTable),
 			}
 			server.AddClientConnection(client)
-
+			server.Wg.Add(1)
 			go func(c *LineServerConnection) {
 				defer c.conn.Close()
 				defer server.RemoveClientConnection(c)
+				defer server.Wg.Done()
 				ServLineProto(c.conn, &server.table, c.update_chan)
 
 			}(client)
