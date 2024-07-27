@@ -3,7 +3,6 @@ package lineproto
 import (
 	"bufio"
 	"github.com/securitym0nkey/icalm/pkg/iplookup"
-	"io"
 	"log"
 	"net"
 	"sync"
@@ -21,7 +20,7 @@ type LineServer struct {
 	clientsMutex sync.Mutex
 }
 
-func ServLineProto(r io.Reader, w io.Writer, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
+func ServLineProto(c net.Conn, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
 
 	quit_chan := make(chan int)
 	defer close(quit_chan)
@@ -29,12 +28,12 @@ func ServLineProto(r io.Reader, w io.Writer, inittable *iplookup.LookupTable, ne
 	request_chan := make(chan string)
 	defer close(request_chan)
 
-	wr := bufio.NewWriter(w)
+	wr := bufio.NewWriter(c)
 	table := *(inittable)
 
 	// wait for new request (lines) in separate goroutine
 	go func() {
-		scanner := bufio.NewScanner(r)
+		scanner := bufio.NewScanner(c)
 		for scanner.Scan() {
 			r := scanner.Text()
 			request_chan <- r
@@ -117,7 +116,7 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 			go func(c *LineServerConnection) {
 				defer c.conn.Close()
 				defer server.RemoveClientConnection(c)
-				ServLineProto(c.conn, c.conn, &server.table, c.update_chan)
+				ServLineProto(c.conn, &server.table, c.update_chan)
 
 			}(client)
 		}
