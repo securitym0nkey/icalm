@@ -9,16 +9,19 @@ import (
 	"os"
 )
 
-// LoadLookupTableFromFile loads a comma seperated CIDR file with exactly 2 cols
-// 1st col is the Network in CIDR and 2nd col is the map value
-func LoadLookupTableFromFile(path string) (*iplookup.DualLookupTable, error) {
+func LoadLookupTableFromFile(path string, table iplookup.LookupTable) error {
 	f, err := os.Open(path)
+	defer f.Close()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	table := iplookup.NewDualLookupTable()
+	return LoadLookupTableFromCSV(f, table)
+}
 
-	r := csv.NewReader(f)
+// LoadLookupTableFromCSV loads a comma seperated CIDR "file" with exactly 2 cols
+// 1st col is the Network in CIDR and 2nd col is the map value
+func LoadLookupTableFromCSV(reader io.Reader, table iplookup.LookupTable) error {
+	r := csv.NewReader(reader)
 	r.FieldsPerRecord = 2
 	for {
 		record, err := r.Read()
@@ -45,6 +48,5 @@ func LoadLookupTableFromFile(path string) (*iplookup.DualLookupTable, error) {
 		// all nice, insert
 		table.AddNetwork(*cidr, record[1])
 	}
-	_ = f.Close()
-	return table, nil
+	return nil
 }
