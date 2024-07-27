@@ -3,28 +3,28 @@ package lineproto
 import (
 	"bufio"
 	"github.com/securitym0nkey/icalm/pkg/iplookup"
-	"io"
-	"net"
 	"log"
+	"net"
 	"sync"
+	"time"
 )
 
-
 type LineServerConnection struct {
-	conn net.Conn
+	conn        net.Conn
 	update_chan chan *iplookup.LookupTable
 }
 
 type LineServer struct {
-	Listener net.Listener
-	clients map[net.Conn]*LineServerConnection
-	table iplookup.LookupTable
+	Listener     net.Listener
+	clients      map[net.Conn]*LineServerConnection
+	table        iplookup.LookupTable
 	clientsMutex sync.Mutex
 }
 
-
-
-func ServLineProto(r io.Reader, w io.Writer, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
+func ServLineProto(c net.Conn, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
+	d, _ := time.ParseDuration("60s")
+	// initial timeout
+	_ = c.SetDeadline(time.Now().Add(d))
 
 	quit_chan := make(chan int)
 	defer close(quit_chan)
@@ -32,14 +32,12 @@ func ServLineProto(r io.Reader, w io.Writer, inittable *iplookup.LookupTable, ne
 	request_chan := make(chan string)
 	defer close(request_chan)
 
-
-	wr := bufio.NewWriter(w)
+	wr := bufio.NewWriter(c)
 	table := *(inittable)
 
-
 	// wait for new request (lines) in separate goroutine
-	go func(){
-		scanner := bufio.NewScanner(r)
+	go func() {
+		scanner := bufio.NewScanner(c)
 		for scanner.Scan() {
 			r := scanner.Text()
 			request_chan <- r
@@ -47,22 +45,23 @@ func ServLineProto(r io.Reader, w io.Writer, inittable *iplookup.LookupTable, ne
 		quit_chan <- 0
 	}()
 
-
 	// main loop per client
 	for {
 		select {
-			case request := <- request_chan:
-				ip := net.ParseIP(request)
-				s, o := table.Lookup(ip)
-				if o {
-					wr.WriteString(s)
-				}
-				wr.WriteString("\n")
-				wr.Flush()
-			case newtable := <- newtable_chan:
-				table = *(newtable)
-			case <-quit_chan:
-				return
+		case request := <-request_chan:
+			// renew timeout on each alive signal
+			_ = c.SetDeadline(time.Now().Add(d))
+			ip := net.ParseIP(request)
+			s, o := table.Lookup(ip)
+			if o {
+				wr.WriteString(s)
+			}
+			wr.WriteString("\n")
+			wr.Flush()
+		case newtable := <-newtable_chan:
+			table = *(newtable)
+		case <-quit_chan:
+			return
 		}
 	}
 
@@ -75,7 +74,6 @@ func (s *LineServer) AddClientConnection(c *LineServerConnection) {
 	s.clients[c.conn] = c
 }
 
-
 func (s *LineServer) RemoveClientConnection(c *LineServerConnection) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
@@ -83,7 +81,7 @@ func (s *LineServer) RemoveClientConnection(c *LineServerConnection) {
 	delete(s.clients, c.conn)
 }
 
-func (s *LineServer) Reload(newtable iplookup.LookupTable){
+func (s *LineServer) Reload(newtable iplookup.LookupTable) {
 	s.clientsMutex.Lock()
 	defer s.clientsMutex.Unlock()
 
@@ -101,10 +99,10 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 		return nil, err
 	}
 
-	server := &LineServer {
+	server := &LineServer{
 		Listener: listener,
-		clients: make(map[net.Conn]*LineServerConnection),
-		table: table,
+		clients:  make(map[net.Conn]*LineServerConnection),
+		table:    table,
 	}
 
 	go func(s *LineServer) {
@@ -116,7 +114,7 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 			}
 
 			client := &LineServerConnection{
-				conn: conn,
+				conn:        conn,
 				update_chan: make(chan *iplookup.LookupTable),
 			}
 			server.AddClientConnection(client)
@@ -124,7 +122,7 @@ func NewLineServer(network string, addr string, table iplookup.LookupTable) (*Li
 			go func(c *LineServerConnection) {
 				defer c.conn.Close()
 				defer server.RemoveClientConnection(c)
-				ServLineProto(c.conn, c.conn, &server.table, c.update_chan)
+				ServLineProto(c.conn, &server.table, c.update_chan)
 
 			}(client)
 		}
