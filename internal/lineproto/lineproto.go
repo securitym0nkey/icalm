@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 type LineServerConnection struct {
@@ -21,6 +22,9 @@ type LineServer struct {
 }
 
 func ServLineProto(c net.Conn, inittable *iplookup.LookupTable, newtable_chan chan *iplookup.LookupTable) {
+	d, _ := time.ParseDuration("60s")
+	// initial timeout
+	_ = c.SetDeadline(time.Now().Add(d))
 
 	quit_chan := make(chan int)
 	defer close(quit_chan)
@@ -45,6 +49,8 @@ func ServLineProto(c net.Conn, inittable *iplookup.LookupTable, newtable_chan ch
 	for {
 		select {
 		case request := <-request_chan:
+			// renew timeout on each alive signal
+			_ = c.SetDeadline(time.Now().Add(d))
 			ip := net.ParseIP(request)
 			s, o := table.Lookup(ip)
 			if o {
