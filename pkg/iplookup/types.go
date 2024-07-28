@@ -1,6 +1,9 @@
 package iplookup
 
-import "net"
+import (
+	"github.com/phemmer/go-iptrie"
+	"net"
+)
 
 type LookupTable interface {
 	Lookup(net.IP) (string, bool)
@@ -24,4 +27,9 @@ type CIDRLookupTable[T NetAddr | NetAddr6] struct {
 type DualLookupTable struct {
 	v4 *CIDRLookupTable[NetAddr]
 	v6 *CIDRLookupTable[NetAddr6]
+}
+
+type TrieLookupTable struct {
+	size int
+	trie *iptrie.Trie
 }

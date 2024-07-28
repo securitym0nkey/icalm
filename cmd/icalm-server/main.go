@@ -48,7 +48,8 @@ func main() {
 	servers := make([]*lineproto.LineServer,0)
 	toclose := make([]io.Closer, 0)
 
-	lookuptable := iplookup.NewDualLookupTable()
+	lookuptable := iplookup.NewTrieLookupTable()
+
 	err := config.LoadLookupTableFromFile(*cidrfileFlag, lookuptable)
 	if err != nil {
 		log.Fatal(err)
@@ -93,7 +94,7 @@ func main() {
 			run = false
 			case <-sigHupChan:
 				for _, serv := range servers {
-					lookuptable := iplookup.NewDualLookupTable()
+					lookuptable := iplookup.NewTrieLookupTable()
 					err := config.LoadLookupTableFromFile(*cidrfileFlag, lookuptable)
 					if err != nil {
 						log.Fatal(err)
