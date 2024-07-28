@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/securitym0nkey/icalm/internal/config"
 	"math/rand"
 	"net"
 	"os"
@@ -11,13 +12,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/securitym0nkey/icalm/internal/config"
 )
 
 var version string = "v0.0.0-dev"
 
 func stress(network string, addr string, stop int) (time.Duration, int, int) {
-	
+
 	conn, err := net.Dial(network, addr)
 	if err != nil {
 		panic(err)
@@ -56,6 +56,13 @@ func stress(network string, addr string, stop int) (time.Duration, int, int) {
 	return time.Since(start), hits, misses
 }
 
+type Totals struct {
+	mu     sync.Mutex
+	hits   int
+	misses int
+	start  time.Time
+}
+
 func main() {
 	version = config.VersionString()
 	var pFlag = flag.Int("p", runtime.NumCPU()/2, "Count of parallel worker routines to send queries")
@@ -86,6 +93,11 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+
+	var totals Totals
+	totals.hits = 0
+	totals.misses = 0
+	totals.start = time.Now()
 	for i := 0; i < *pFlag; i++ {
 		wg.Add(1)
 		go func(n int) {
@@ -93,8 +105,14 @@ func main() {
 			du, hits, misses := stress(connect[0], connect[1], *cFlag)
 			rate := float64(hits+misses) / du.Seconds()
 			fmt.Printf("[%v] %v hit/miss(%v/%v) lookups took %v (%.2f lookups/s)\n", n, hits+misses, hits, misses, du, rate)
+			totals.mu.Lock()
+			totals.hits += hits
+			totals.misses += misses
+			totals.mu.Unlock()
 		}(i)
 	}
 	wg.Wait()
-
+	du := time.Since(totals.start)
+	rate := float64(totals.hits+totals.misses) / du.Seconds()
+	fmt.Printf("[Total] %v hit/miss(%v/%v) lookups took %v (%.2f lookups/s)\n", totals.hits+totals.misses, totals.hits, totals.misses, du, rate)
 }
