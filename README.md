@@ -1,7 +1,11 @@
+>[!IMPORTANT]
+> This has moved to Codeberg: https://codeberg.org/securitym0nkey/icalm
+
 # icalm
 Ip - CIDR Annotation Lookup Microservice
 
 A microservice to lookup annotations for IP Addresses based on CIDR mappings
+
 
 
 Annotations can be loaded from a cvs file. Such cvs file has 2 columns: *NETWORK*,*ANNOTATION*
